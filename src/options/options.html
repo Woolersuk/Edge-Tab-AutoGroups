@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auto Tab Grouper</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f3efe6;
+      --panel: rgba(255, 255, 255, 0.8);
+      --panel-strong: #ffffff;
+      --text: #16211d;
+      --muted: #61716b;
+      --border: rgba(22, 33, 29, 0.12);
+      --accent: #0f766e;
+      --accent-strong: #115e59;
+      --danger: #b42318;
+      --shadow: 0 18px 40px rgba(22, 33, 29, 0.12);
+      --radius: 24px;
+    }
+
+    :root[data-theme="dark"] {
+      --bg: #111714;
+      --panel: rgba(23, 31, 27, 0.88);
+      --panel-strong: #1b2420;
+      --text: #edf4ef;
+      --muted: #9aada5;
+      --border: rgba(237, 244, 239, 0.08);
+      --accent: #54b8aa;
+      --accent-strong: #7ad1c5;
+      --danger: #ff7b72;
+      --shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root[data-theme="system"] {
+        --bg: #111714;
+        --panel: rgba(23, 31, 27, 0.88);
+        --panel-strong: #1b2420;
+        --text: #edf4ef;
+        --muted: #9aada5;
+        --border: rgba(237, 244, 239, 0.08);
+        --accent: #54b8aa;
+        --accent-strong: #7ad1c5;
+        --danger: #ff7b72;
+        --shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Aptos", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(15, 118, 110, 0.18), transparent 30%),
+        linear-gradient(180deg, var(--bg), color-mix(in srgb, var(--bg) 82%, #cdd8d1));
+      color: var(--text);
+    }
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px 80px;
+    }
+    .hero, .panel {
+      background: var(--panel);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+    }
+    .hero {
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+    .hero h1 { margin: 0 0 10px; font-size: clamp(2rem, 4vw, 3.4rem); }
+    .hero p { margin: 0; max-width: 720px; color: var(--muted); }
+    .grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 24px;
+    }
+    .panel {
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .section-head h2, .section-head h3, h3 {
+      margin: 0;
+    }
+    .eyebrow {
+      margin: 0 0 6px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-size: .75rem;
+      color: var(--muted);
+    }
+    .group-stack {
+      display: grid;
+      gap: 16px;
+    }
+    .group-card, .pattern-card, .test-result {
+      background: var(--panel-strong);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+    }
+    .group-card {
+      position: relative;
+      z-index: 1;
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+      transition: transform .18s ease, border-color .18s ease;
+    }
+    .group-card.menu-open {
+      z-index: 30;
+    }
+    .group-card.dragging {
+      opacity: .6;
+      transform: scale(.985);
+      border-color: var(--accent);
+    }
+    .group-card-header, .group-card-actions, .toolbar, .setting-row, .group-footer {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .patterns {
+      display: grid;
+      gap: 12px;
+    }
+    .pattern-card {
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 160px 1fr auto;
+      gap: 10px;
+    }
+    .group-footer { color: var(--muted); }
+    .colour-select {
+      display: block;
+      min-width: 140px;
+    }
+    .colour-picker {
+      position: relative;
+    }
+    .colour-menu-button,
+    .colour-option {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
+    }
+    .colour-menu-button {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: transparent;
+      color: var(--text);
+      padding: 10px 12px;
+      justify-content: space-between;
+    }
+    .colour-menu-button::after {
+      content: "▾";
+      color: var(--muted);
+      font-size: .9rem;
+      margin-left: 10px;
+    }
+    .colour-menu-button .colour-label {
+      margin-right: auto;
+      text-transform: lowercase;
+    }
+    .colour-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      display: none;
+      padding: 6px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--panel-strong);
+      box-shadow: var(--shadow);
+      z-index: 20;
+    }
+    .colour-picker.open .colour-menu {
+      display: grid;
+      gap: 4px;
+    }
+    .colour-option {
+      border: none;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--text);
+      padding: 8px 10px;
+      font-weight: 500;
+    }
+    .colour-option:hover {
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
+    }
+    .colour-chip {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      flex: 0 0 12px;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+    }
+    input, select, button {
+      font: inherit;
+    }
+    input, select {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      padding: 10px 12px;
+    }
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 11px 16px;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--accent);
+      color: white;
+    }
+    button:hover { background: var(--accent-strong); }
+    .ghost {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .danger { color: var(--danger); }
+    .tester-box {
+      display: grid;
+      gap: 12px;
+    }
+    .save-status {
+      min-height: 1.2em;
+      color: var(--muted);
+    }
+    .diagnostics-output {
+      margin-top: 14px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--panel-strong);
+      color: var(--muted);
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: .9rem;
+      min-height: 52px;
+    }
+    .help-note {
+      margin-top: 14px;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: color-mix(in srgb, var(--accent) 8%, var(--panel-strong));
+      color: var(--text);
+    }
+    .help-note p {
+      margin: 0;
+      line-height: 1.5;
+    }
+    .help-note code {
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      background: rgba(0, 0, 0, 0.06);
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+    .range-stack {
+      display: grid;
+      gap: 8px;
+    }
+    .range-stack output {
+      color: var(--muted);
+      font-size: .92rem;
+    }
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      .pattern-card {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Auto Tab Grouper</p>
+      <h2>Rule-driven tab organisation with clean groups.</h2>
+      <p>Create reusable groups, drag them into order and test rules against live URLs from one place.<br><br>Tab Groups can be set to mirror the order set in this options page..</p>
+    </section>
+
+    <div class="grid">
+      <section>
+        <div class="panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Tools</p>
+              <h2>Import and Export</h2>
+            </div>
+            <div class="toolbar">
+              <button id="exportJson" type="button" class="ghost">Export JSON</button>
+              <button id="importJson" type="button" class="ghost">Import JSON</button>
+              <button id="inspectColours" type="button" class="ghost">Inspect Live Colours</button>
+              <input id="importFile" type="file" accept="application/json" hidden>
+            </div>
+          </div>
+          <p class="save-status" id="saveStatus"></p>
+          <div id="diagnosticsOutput" class="diagnostics-output">No diagnostics run yet.</div>
+          <div class="help-note">
+            <p>If Edge is not showing the newer tab group colours, try opening <code>edge://flags</code>, search for <code>custom colors for tab groups</code>, set it to <strong>Enabled</strong>, then restart Edge.</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Groups</p>
+              <h2>Rules</h2>
+            </div>
+            <div class="toolbar">
+              <button id="addGroup" type="button">Add Group</button>
+              <button id="saveGroups" type="button">Save Groups</button>
+              <button id="organiseCurrent" type="button" class="ghost">Organise Current Window</button>
+              <button id="organiseAll" type="button" class="ghost">Organise All Windows</button>
+            </div>
+          </div>
+          <div id="groups" class="group-stack"></div>
+        </div>
+      </section>
+
+      <aside>
+        <div class="panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Preferences</p>
+              <h2>Behaviour</h2>
+            </div>
+          </div>
+          <div class="setting-row">
+            <label for="autoOrganise">Auto-organise tabs (via groups ordering here)</label>
+            <input id="autoOrganise" type="checkbox">
+          </div>
+          <div class="range-stack">
+            <label for="autoRefreshDelayMs">Auto-refresh delay</label>
+            <input
+              id="autoRefreshDelayMs"
+              type="range"
+              min="500"
+              max="10000"
+              step="500"
+              value="2000"
+            >
+            <output id="autoRefreshDelayValue" for="autoRefreshDelayMs">2 seconds</output>
+          </div>
+          <div class="setting-row">
+            <label for="darkMode">Theme</label>
+            <select id="darkMode">
+              <option value="system">System</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
+          <div class="toolbar" style="margin-top:16px">
+            <button id="savePreferences" type="button">Save Preferences</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Tester</p>
+              <h2>URL Tester</h2>
+            </div>
+          </div>
+          <div class="tester-box">
+            <input id="testerUrl" type="url" placeholder="https://portal.azure.com">
+            <button id="runTester" type="button">Test URL</button>
+            <div id="testerResults" class="patterns">
+              <p>Enter a URL to test your rules.</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+  <script type="module" src="./index.js"></script>
+</body>
+</html>

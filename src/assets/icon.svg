@@ -1,0 +1,21 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ring" x1="40" y1="212" x2="212" y2="44" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22C3F6"/>
+      <stop offset="1" stop-color="#A02AF6"/>
+    </linearGradient>
+    <linearGradient id="glyph" x1="72" y1="176" x2="184" y2="72" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4C8DF7"/>
+      <stop offset="1" stop-color="#7A5AF8"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="#FFFFFF"/>
+  <circle cx="128" cy="128" r="102" stroke="url(#ring)" stroke-width="12"/>
+  <circle cx="128" cy="110" r="18" stroke="url(#glyph)" stroke-width="10"/>
+  <circle cx="90" cy="118" r="14" stroke="url(#glyph)" stroke-width="10"/>
+  <circle cx="166" cy="118" r="14" stroke="url(#glyph)" stroke-width="10"/>
+  <path d="M82 176C82 151.699 101.699 132 126 132H130C154.301 132 174 151.699 174 176V180H82V176Z" stroke="url(#glyph)" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M56 174C56 156.327 70.3269 142 88 142H92C103.555 142 113.681 148.12 119.279 157.296" stroke="url(#glyph)" stroke-width="10" stroke-linecap="round"/>
+  <path d="M200 174C200 156.327 185.673 142 168 142H164C152.445 142 142.319 148.12 136.721 157.296" stroke="url(#glyph)" stroke-width="10" stroke-linecap="round"/>
+  <rect x="74" y="166" width="108" height="16" rx="8" fill="url(#glyph)"/>
+</svg>
