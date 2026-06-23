@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auto Tab Grouper</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #101714;
+      --card: #17211d;
+      --text: #edf4ef;
+      --muted: #9aada5;
+      --accent: #54b8aa;
+    }
+    body {
+      margin: 0;
+      min-width: 320px;
+      font-family: "Segoe UI", "Aptos", sans-serif;
+      background:
+        radial-gradient(circle at top right, rgba(84, 184, 170, 0.2), transparent 28%),
+        var(--bg);
+      color: var(--text);
+      padding: 16px;
+    }
+    .shell {
+      background: var(--card);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 18px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.15rem;
+    }
+    p {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: .92rem;
+    }
+    .actions {
+      display: grid;
+      gap: 10px;
+    }
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 11px 14px;
+      background: var(--accent);
+      color: #08211d;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,.12);
+    }
+    #status {
+      margin-top: 12px;
+      min-height: 1.2em;
+      color: var(--muted);
+      font-size: .88rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <h1>Auto Tab Grouper</h1>
+    <p>Organise one window or sweep every open window with your saved rule order.</p>
+    <div class="actions">
+      <button id="current" type="button">Organise Current Window</button>
+      <button id="all" type="button">Organise All Windows</button>
+      <button id="rules" type="button" class="secondary">Open Options</button>
+    </div>
+    <div id="status"></div>
+  </div>
+  <script type="module" src="./index.js"></script>
+</body>
+</html>
