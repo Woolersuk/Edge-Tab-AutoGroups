@@ -8,6 +8,7 @@ import {
 } from "../shared/storage.js";
 
 const AUTO_ORGANISE_ALARM_PREFIX = "auto-organise-window-";
+const TAB_SYNC_RETRY_DELAYS_MS = [0, 150, 400, 900];
 
 function getAutoOrganiseAlarmName(windowId) {
   return `${AUTO_ORGANISE_ALARM_PREFIX}${windowId}`;
@@ -77,6 +78,18 @@ async function syncTabGroupForTab(tabId) {
     title: matchedRuleGroup.name,
     color: matchedRuleGroup.color || DEFAULT_GROUP_COLOUR
   });
+}
+
+function scheduleTabGroupSync(tabId, delays = TAB_SYNC_RETRY_DELAYS_MS) {
+  if (tabId == null) {
+    return;
+  }
+
+  for (const delayMs of delays) {
+    setTimeout(() => {
+      syncTabGroupForTab(tabId).catch(() => {});
+    }, delayMs);
+  }
 }
 
 async function mergeDuplicateGroups(windowId, groupsByName) {
@@ -258,11 +271,11 @@ async function scheduleAutoOrganise(windowId) {
 function addAutoListeners() {
   chrome.tabs.onCreated.addListener((tab) => {
     scheduleAutoOrganise(tab.windowId);
-    syncTabGroupForTab(tab.id).catch(() => {});
+    scheduleTabGroupSync(tab.id);
   });
   chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (changeInfo.url || changeInfo.status === "complete") {
-      syncTabGroupForTab(tabId).catch(() => {});
+      scheduleTabGroupSync(tabId);
       scheduleAutoOrganise(tab.windowId);
     }
   });
@@ -273,7 +286,7 @@ function addAutoListeners() {
     }
   });
   chrome.tabs.onAttached.addListener((tabId, attachInfo) => {
-    syncTabGroupForTab(tabId).catch(() => {});
+    scheduleTabGroupSync(tabId);
     scheduleAutoOrganise(attachInfo.newWindowId);
   });
 
