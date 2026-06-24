@@ -12,6 +12,7 @@ const elements = {
   groups: document.getElementById("groups"),
   addGroup: document.getElementById("addGroup"),
   sortGroupsAlphabetically: document.getElementById("sortGroupsAlphabetically"),
+  sortGroupsReverseAlphabetically: document.getElementById("sortGroupsReverseAlphabetically"),
   saveGroups: document.getElementById("saveGroups"),
   organiseCurrent: document.getElementById("organiseCurrent"),
   organiseAll: document.getElementById("organiseAll"),
@@ -265,14 +266,35 @@ function renderGroups(groups) {
   syncOrderInputs();
 }
 
+function applySortedGroupOrder(groups) {
+  return groups.map((group, index) => ({
+    ...group,
+    order: index + 1
+  }));
+}
+
 async function sortGroupsAlphabetically() {
-  const sortedGroups = collectGroupsFromDom().sort((left, right) =>
-    left.name.localeCompare(right.name, undefined, { sensitivity: "base" })
+  const sortedGroups = applySortedGroupOrder(
+    collectGroupsFromDom().sort((left, right) =>
+      left.name.localeCompare(right.name, undefined, { sensitivity: "base" })
+    )
   );
 
   state.groups = await saveGroups(sortedGroups);
   renderGroups(state.groups);
   elements.saveStatus.textContent = "Groups sorted alphabetically";
+}
+
+async function sortGroupsReverseAlphabetically() {
+  const sortedGroups = applySortedGroupOrder(
+    collectGroupsFromDom().sort((left, right) =>
+      right.name.localeCompare(left.name, undefined, { sensitivity: "base" })
+    )
+  );
+
+  state.groups = await saveGroups(sortedGroups);
+  renderGroups(state.groups);
+  elements.saveStatus.textContent = "Groups sorted reverse alphabetically";
 }
 
 function renderTesterResults(url) {
@@ -387,6 +409,7 @@ elements.addGroup.addEventListener("click", () => {
   syncOrderInputs();
 });
 elements.sortGroupsAlphabetically.addEventListener("click", sortGroupsAlphabetically);
+elements.sortGroupsReverseAlphabetically.addEventListener("click", sortGroupsReverseAlphabetically);
 elements.saveGroups.addEventListener("click", handleSaveGroups);
 elements.organiseCurrent.addEventListener("click", () =>
   runOrganiser("organiseCurrent", "Organising current window")

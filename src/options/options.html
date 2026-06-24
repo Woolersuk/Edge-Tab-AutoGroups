@@ -84,6 +84,12 @@
       padding: 24px;
       margin-bottom: 24px;
     }
+    .page-meta {
+      margin-top: 8px;
+      text-align: center;
+      color: var(--muted);
+      font-size: .82rem;
+    }
     .section-head {
       display: flex;
       justify-content: space-between;
@@ -350,6 +356,7 @@
               <div class="toolbar-row">
                 <button id="addGroup" type="button">Add Group</button>
                 <button id="sortGroupsAlphabetically" type="button" class="ghost">Sort A-Z</button>
+                <button id="sortGroupsReverseAlphabetically" type="button" class="ghost">Sort Z-A</button>
                 <button id="saveGroups" type="button">Save Groups</button>
               </div>
               <div class="toolbar-row">
@@ -400,6 +407,7 @@
         </div>
       </aside>
     </div>
+    <p class="page-meta">Author: woolersuk</p>
   </main>
   <script type="module" src="./index.js"></script>
 </body>
