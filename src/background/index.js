@@ -272,9 +272,10 @@ function addAutoListeners() {
       scheduleAutoOrganise(removeInfo.windowId);
     }
   });
-  chrome.tabs.onAttached.addListener((tabId, attachInfo) =>
-    scheduleAutoOrganise(attachInfo.newWindowId)
-  );
+  chrome.tabs.onAttached.addListener((tabId, attachInfo) => {
+    syncTabGroupForTab(tabId).catch(() => {});
+    scheduleAutoOrganise(attachInfo.newWindowId);
+  });
 
   chrome.alarms.onAlarm.addListener((alarm) => {
     if (!alarm.name.startsWith(AUTO_ORGANISE_ALARM_PREFIX)) {
