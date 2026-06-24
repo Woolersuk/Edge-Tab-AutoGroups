@@ -13,6 +13,72 @@ function getAutoOrganiseAlarmName(windowId) {
   return `${AUTO_ORGANISE_ALARM_PREFIX}${windowId}`;
 }
 
+async function findOrCreateNamedGroup(windowId, groupName, colour, tabId) {
+  const existingGroups = await chrome.tabGroups.query({ windowId });
+  const matchedGroup = existingGroups.find((group) => group.title === groupName) || null;
+
+  if (matchedGroup?.id != null) {
+    await chrome.tabGroups.update(matchedGroup.id, {
+      title: groupName,
+      color: colour || DEFAULT_GROUP_COLOUR
+    });
+    return matchedGroup.id;
+  }
+
+  const groupId = await chrome.tabs.group({ tabIds: [tabId] });
+  await chrome.tabGroups.update(groupId, {
+    title: groupName,
+    color: colour || DEFAULT_GROUP_COLOUR
+  });
+  return groupId;
+}
+
+async function syncTabGroupForTab(tabId) {
+  if (tabId == null) {
+    return;
+  }
+
+  let tab;
+  try {
+    tab = await chrome.tabs.get(tabId);
+  } catch {
+    return;
+  }
+
+  if (!tab?.id || !tab.url || tab.pinned || tab.windowId === chrome.windows.WINDOW_ID_NONE) {
+    return;
+  }
+
+  const groups = await getGroups();
+  const matchedRuleGroup = findMatchingGroup(tab.url, groups);
+
+  if (!matchedRuleGroup) {
+    if (tab.groupId != null && tab.groupId >= 0) {
+      await chrome.tabs.ungroup(tab.id);
+    }
+    return;
+  }
+
+  const targetGroupId = await findOrCreateNamedGroup(
+    tab.windowId,
+    matchedRuleGroup.name,
+    matchedRuleGroup.color,
+    tab.id
+  );
+
+  if (tab.groupId !== targetGroupId) {
+    await chrome.tabs.group({
+      groupId: targetGroupId,
+      tabIds: [tab.id]
+    });
+  }
+
+  await chrome.tabGroups.update(targetGroupId, {
+    title: matchedRuleGroup.name,
+    color: matchedRuleGroup.color || DEFAULT_GROUP_COLOUR
+  });
+}
+
 async function mergeDuplicateGroups(windowId, groupsByName) {
   const existingGroups = await chrome.tabGroups.query({ windowId });
   let duplicateGroupsResolved = 0;
@@ -61,6 +127,7 @@ async function organiseWindow(windowId, mode = "manual", scope = "current") {
   const groups = await getGroups();
   const tabs = await chrome.tabs.query({ windowId });
   const groupedTabs = new Map();
+  const unmatchedGroupedTabIds = [];
   const tabIndexById = new Map(
     tabs
       .filter((tab) => tab.id != null)
@@ -74,6 +141,9 @@ async function organiseWindow(windowId, mode = "manual", scope = "current") {
 
     const group = findMatchingGroup(tab.url, groups);
     if (!group) {
+      if (tab.groupId != null && tab.groupId >= 0) {
+        unmatchedGroupedTabIds.push(tab.id);
+      }
       continue;
     }
 
@@ -85,6 +155,10 @@ async function organiseWindow(windowId, mode = "manual", scope = "current") {
     }
 
     groupedTabs.get(group.name).tabIds.push(tab.id);
+  }
+
+  if (unmatchedGroupedTabIds.length > 0) {
+    await chrome.tabs.ungroup(unmatchedGroupedTabIds);
   }
 
   const duplicateGroupsResolved = await mergeDuplicateGroups(windowId, groupedTabs);
@@ -182,9 +256,13 @@ async function scheduleAutoOrganise(windowId) {
 }
 
 function addAutoListeners() {
-  chrome.tabs.onCreated.addListener((tab) => scheduleAutoOrganise(tab.windowId));
+  chrome.tabs.onCreated.addListener((tab) => {
+    scheduleAutoOrganise(tab.windowId);
+    syncTabGroupForTab(tab.id).catch(() => {});
+  });
   chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (changeInfo.url || changeInfo.status === "complete") {
+      syncTabGroupForTab(tabId).catch(() => {});
       scheduleAutoOrganise(tab.windowId);
     }
   });

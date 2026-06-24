@@ -91,6 +91,9 @@
       gap: 16px;
       margin-bottom: 18px;
     }
+    .section-head.groups-head {
+      align-items: flex-start;
+    }
     .section-head h2, .section-head h3, h3 {
       margin: 0;
     }
@@ -131,6 +134,18 @@
       gap: 12px;
       align-items: center;
       justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .toolbar-group {
+      display: grid;
+      gap: 10px;
+      justify-items: end;
+    }
+    .toolbar-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: flex-end;
       flex-wrap: wrap;
     }
     .patterns {
@@ -300,7 +315,7 @@
     <section class="hero">
       <p class="eyebrow">Auto Tab Grouper</p>
       <h2>Rule-driven tab organisation with clean groups.</h2>
-      <p>Create reusable groups, drag them into order and test rules against live URLs from one place.<br><br>Tab Groups can be set to mirror the order set in this options page..</p>
+      <p>Create reusable groups, sort them into a friendly A-Z order and test rules against live URLs from one place.</p>
     </section>
 
     <div class="grid">
@@ -326,16 +341,21 @@
         </div>
 
         <div class="panel">
-          <div class="section-head">
+          <div class="section-head groups-head">
             <div>
               <p class="eyebrow">Groups</p>
               <h2>Rules</h2>
             </div>
-            <div class="toolbar">
-              <button id="addGroup" type="button">Add Group</button>
-              <button id="saveGroups" type="button">Save Groups</button>
-              <button id="organiseCurrent" type="button" class="ghost">Organise Current Window</button>
-              <button id="organiseAll" type="button" class="ghost">Organise All Windows</button>
+            <div class="toolbar-group">
+              <div class="toolbar-row">
+                <button id="addGroup" type="button">Add Group</button>
+                <button id="sortGroupsAlphabetically" type="button" class="ghost">Sort A-Z</button>
+                <button id="saveGroups" type="button">Save Groups</button>
+              </div>
+              <div class="toolbar-row">
+                <button id="organiseCurrent" type="button" class="ghost">Organise Current Window</button>
+                <button id="organiseAll" type="button" class="ghost">Organise All Windows</button>
+              </div>
             </div>
           </div>
           <div id="groups" class="group-stack"></div>
@@ -347,24 +367,8 @@
           <div class="section-head">
             <div>
               <p class="eyebrow">Preferences</p>
-              <h2>Behaviour</h2>
+              <h2>Appearance</h2>
             </div>
-          </div>
-          <div class="setting-row">
-            <label for="autoOrganise">Auto-organise tabs (via groups ordering here)</label>
-            <input id="autoOrganise" type="checkbox">
-          </div>
-          <div class="range-stack">
-            <label for="autoRefreshDelayMs">Auto-refresh delay</label>
-            <input
-              id="autoRefreshDelayMs"
-              type="range"
-              min="500"
-              max="10000"
-              step="500"
-              value="2000"
-            >
-            <output id="autoRefreshDelayValue" for="autoRefreshDelayMs">2 seconds</output>
           </div>
           <div class="setting-row">
             <label for="darkMode">Theme</label>

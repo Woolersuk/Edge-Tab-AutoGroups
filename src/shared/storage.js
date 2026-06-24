@@ -115,6 +115,7 @@ export async function getSettings() {
 
   return {
     ...rawSettings,
+    autoOrganise: false,
     autoOrganiseDelayMs: normaliseDelay(rawSettings.autoOrganiseDelayMs)
   };
 }
@@ -127,6 +128,7 @@ export async function saveSettings(settings) {
 
   const normalised = {
     ...merged,
+    autoOrganise: false,
     autoOrganiseDelayMs: normaliseDelay(merged.autoOrganiseDelayMs)
   };
 

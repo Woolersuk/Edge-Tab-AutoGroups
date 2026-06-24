@@ -1,7 +1,4 @@
-import {
-  DEFAULT_AUTO_ORGANISE_DELAY_MS,
-  MATCH_TYPES
-} from "../shared/constants.js";
+import { MATCH_TYPES } from "../shared/constants.js";
 import { patternMatches } from "../shared/matching.js";
 import { getGroups, getSettings, saveGroups, saveSettings } from "../shared/storage.js";
 import { createGroupId, downloadJson } from "../shared/utils.js";
@@ -14,6 +11,7 @@ const state = {
 const elements = {
   groups: document.getElementById("groups"),
   addGroup: document.getElementById("addGroup"),
+  sortGroupsAlphabetically: document.getElementById("sortGroupsAlphabetically"),
   saveGroups: document.getElementById("saveGroups"),
   organiseCurrent: document.getElementById("organiseCurrent"),
   organiseAll: document.getElementById("organiseAll"),
@@ -22,9 +20,6 @@ const elements = {
   importFile: document.getElementById("importFile"),
   inspectColours: document.getElementById("inspectColours"),
   diagnosticsOutput: document.getElementById("diagnosticsOutput"),
-  autoOrganise: document.getElementById("autoOrganise"),
-  autoRefreshDelayMs: document.getElementById("autoRefreshDelayMs"),
-  autoRefreshDelayValue: document.getElementById("autoRefreshDelayValue"),
   darkMode: document.getElementById("darkMode"),
   savePreferences: document.getElementById("savePreferences"),
   testerUrl: document.getElementById("testerUrl"),
@@ -248,11 +243,6 @@ function createGroupCard(group = {}) {
   return card;
 }
 
-function formatDelayLabel(value) {
-  const seconds = Number(value) / 1000;
-  return `${seconds % 1 === 0 ? seconds.toFixed(0) : seconds.toFixed(1)} seconds`;
-}
-
 function collectGroupsFromDom() {
   return [...elements.groups.querySelectorAll(".group-card")].map((card, index) => ({
     id: card.dataset.groupId,
@@ -273,6 +263,16 @@ function renderGroups(groups) {
   elements.groups.innerHTML = "";
   groups.forEach((group) => elements.groups.appendChild(createGroupCard(group)));
   syncOrderInputs();
+}
+
+async function sortGroupsAlphabetically() {
+  const sortedGroups = collectGroupsFromDom().sort((left, right) =>
+    left.name.localeCompare(right.name, undefined, { sensitivity: "base" })
+  );
+
+  state.groups = await saveGroups(sortedGroups);
+  renderGroups(state.groups);
+  elements.saveStatus.textContent = "Groups sorted alphabetically";
 }
 
 function renderTesterResults(url) {
@@ -311,12 +311,6 @@ async function load() {
   state.settings = settings;
 
   renderGroups(groups);
-
-  elements.autoOrganise.checked = settings.autoOrganise;
-  elements.autoRefreshDelayMs.value = String(
-    settings.autoOrganiseDelayMs || DEFAULT_AUTO_ORGANISE_DELAY_MS
-  );
-  elements.autoRefreshDelayValue.textContent = formatDelayLabel(elements.autoRefreshDelayMs.value);
   elements.darkMode.value = settings.darkMode || "system";
   document.documentElement.dataset.theme = settings.darkMode || "system";
 }
@@ -329,13 +323,10 @@ async function handleSaveGroups() {
 
 async function handleSavePreferences() {
   state.settings = await saveSettings({
-    autoOrganise: elements.autoOrganise.checked,
-    autoOrganiseDelayMs: Number(elements.autoRefreshDelayMs.value),
     darkMode: elements.darkMode.value
   });
   document.documentElement.dataset.theme = state.settings.darkMode;
   renderGroups(state.groups);
-  elements.autoRefreshDelayValue.textContent = formatDelayLabel(state.settings.autoOrganiseDelayMs);
   elements.saveStatus.textContent = "Preferences saved";
 }
 
@@ -395,6 +386,7 @@ elements.addGroup.addEventListener("click", () => {
   elements.groups.appendChild(createGroupCard({ order: elements.groups.children.length + 1 }));
   syncOrderInputs();
 });
+elements.sortGroupsAlphabetically.addEventListener("click", sortGroupsAlphabetically);
 elements.saveGroups.addEventListener("click", handleSaveGroups);
 elements.organiseCurrent.addEventListener("click", () =>
   runOrganiser("organiseCurrent", "Organising current window")
@@ -408,9 +400,6 @@ elements.importJson.addEventListener("click", () => elements.importFile.click())
 elements.importFile.addEventListener("change", handleImport);
 elements.inspectColours.addEventListener("click", inspectTabGroupColours);
 elements.runTester.addEventListener("click", () => renderTesterResults(elements.testerUrl.value));
-elements.autoRefreshDelayMs.addEventListener("input", () => {
-  elements.autoRefreshDelayValue.textContent = formatDelayLabel(elements.autoRefreshDelayMs.value);
-});
 document.addEventListener("click", (event) => {
   if (!event.target.closest(".colour-picker")) {
     closeAllColourMenus();
