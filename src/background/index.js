@@ -263,9 +263,35 @@ async function scheduleAutoOrganise(windowId) {
 
   const alarmName = getAutoOrganiseAlarmName(windowId);
   await chrome.alarms.clear(alarmName);
+  if (settings.autoOrganiseDelayMs <= 0) {
+    organiseWindow(windowId, "auto", "current").catch(() => {});
+    return;
+  }
+
   chrome.alarms.create(alarmName, {
     when: Date.now() + settings.autoOrganiseDelayMs
   });
+}
+
+async function clearAutoOrganiseAlarms() {
+  const alarms = await chrome.alarms.getAll();
+  await Promise.all(
+    alarms
+      .filter((alarm) => alarm.name.startsWith(AUTO_ORGANISE_ALARM_PREFIX))
+      .map((alarm) => chrome.alarms.clear(alarm.name))
+  );
+}
+
+async function refreshAutoOrganiseSchedules() {
+  const settings = await getSettings();
+
+  if (!settings.autoOrganise) {
+    await clearAutoOrganiseAlarms();
+    return;
+  }
+
+  const windows = await chrome.windows.getAll({});
+  await Promise.all(windows.map((windowInfo) => scheduleAutoOrganise(windowInfo.id)));
 }
 
 function addAutoListeners() {
@@ -312,6 +338,14 @@ chrome.runtime.onStartup.addListener(() => {
   migrateStorage();
 });
 
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== "sync" || !changes.settings) {
+    return;
+  }
+
+  refreshAutoOrganiseSchedules().catch(() => {});
+});
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "organiseCurrent") {
     chrome.windows.getCurrent({}, async (windowInfo) => {
@@ -340,6 +374,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       sendResponse({ ok: true, windowId: windowInfo.id, groups: diagnostics });
     });
+    return true;
+  }
+
+  if (message.action === "refreshAutoOrganise") {
+    refreshAutoOrganiseSchedules().then(() => sendResponse({ ok: true }));
     return true;
   }
 

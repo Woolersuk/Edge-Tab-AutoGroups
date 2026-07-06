@@ -302,6 +302,27 @@
       display: grid;
       gap: 8px;
     }
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-content: flex-start;
+    }
+    .checkbox-row input[type="checkbox"] {
+      width: auto;
+      margin: 0;
+    }
+    .delay-row {
+      margin-top: 16px;
+      display: grid;
+      gap: 10px;
+    }
+    .delay-controls {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 84px;
+      gap: 12px;
+      align-items: center;
+    }
     .range-stack output {
       color: var(--muted);
       font-size: .92rem;
@@ -374,7 +395,7 @@
           <div class="section-head">
             <div>
               <p class="eyebrow">Preferences</p>
-              <h2>Appearance</h2>
+              <h2>Preferences</h2>
             </div>
           </div>
           <div class="setting-row">
@@ -384,6 +405,20 @@
               <option value="light">Light</option>
               <option value="dark">Dark</option>
             </select>
+          </div>
+          <div class="delay-row">
+            <label class="checkbox-row" for="autoOrganise">
+              <input id="autoOrganise" type="checkbox">
+              <span>Auto-organise windows</span>
+            </label>
+            <div>
+              <label for="autoOrganiseDelayRange">Delay before organising</label>
+              <div class="delay-controls">
+                <input id="autoOrganiseDelayRange" type="range" min="0" max="30" step="1">
+                <input id="autoOrganiseDelaySeconds" type="number" min="0" max="30" step="1" inputmode="numeric">
+              </div>
+              <output id="autoOrganiseDelayOutput" for="autoOrganiseDelayRange autoOrganiseDelaySeconds">Starts immediately</output>
+            </div>
           </div>
           <div class="toolbar" style="margin-top:16px">
             <button id="savePreferences" type="button">Save Preferences</button>
