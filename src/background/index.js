@@ -8,10 +8,15 @@ import {
 } from "../shared/storage.js";
 
 const AUTO_ORGANISE_ALARM_PREFIX = "auto-organise-window-";
+const TAB_SYNC_ALARM_PREFIX = "tab-sync-";
 const TAB_SYNC_RETRY_DELAYS_MS = [0, 150, 400, 900];
 
 function getAutoOrganiseAlarmName(windowId) {
   return `${AUTO_ORGANISE_ALARM_PREFIX}${windowId}`;
+}
+
+function getTabSyncAlarmName(tabId, attempt) {
+  return `${TAB_SYNC_ALARM_PREFIX}${tabId}-${attempt}`;
 }
 
 async function findOrCreateNamedGroup(windowId, groupName, colour, tabId) {
@@ -80,15 +85,18 @@ async function syncTabGroupForTab(tabId) {
   });
 }
 
-function scheduleTabGroupSync(tabId, delays = TAB_SYNC_RETRY_DELAYS_MS) {
+async function scheduleTabGroupSync(tabId, delays = TAB_SYNC_RETRY_DELAYS_MS) {
   if (tabId == null) {
     return;
   }
 
-  for (const delayMs of delays) {
-    setTimeout(() => {
-      syncTabGroupForTab(tabId).catch(() => {});
-    }, delayMs);
+  const alarmNames = delays.map((delayMs, index) => getTabSyncAlarmName(tabId, index));
+  await Promise.all(alarmNames.map((alarmName) => chrome.alarms.clear(alarmName)));
+
+  for (const [index, delayMs] of delays.entries()) {
+    chrome.alarms.create(getTabSyncAlarmName(tabId, index), {
+      when: Date.now() + delayMs
+    });
   }
 }
 
@@ -297,11 +305,11 @@ async function refreshAutoOrganiseSchedules() {
 function addAutoListeners() {
   chrome.tabs.onCreated.addListener((tab) => {
     scheduleAutoOrganise(tab.windowId);
-    scheduleTabGroupSync(tab.id);
+    scheduleTabGroupSync(tab.id).catch(() => {});
   });
   chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (changeInfo.url || changeInfo.status === "complete") {
-      scheduleTabGroupSync(tabId);
+      scheduleTabGroupSync(tabId).catch(() => {});
       scheduleAutoOrganise(tab.windowId);
     }
   });
@@ -312,11 +320,21 @@ function addAutoListeners() {
     }
   });
   chrome.tabs.onAttached.addListener((tabId, attachInfo) => {
-    scheduleTabGroupSync(tabId);
+    scheduleTabGroupSync(tabId).catch(() => {});
     scheduleAutoOrganise(attachInfo.newWindowId);
   });
 
   chrome.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name.startsWith(TAB_SYNC_ALARM_PREFIX)) {
+      const suffix = alarm.name.slice(TAB_SYNC_ALARM_PREFIX.length);
+      const separatorIndex = suffix.indexOf("-");
+      const tabId = Number(separatorIndex >= 0 ? suffix.slice(0, separatorIndex) : suffix);
+      if (!Number.isNaN(tabId)) {
+        syncTabGroupForTab(tabId).catch(() => {});
+      }
+      return;
+    }
+
     if (!alarm.name.startsWith(AUTO_ORGANISE_ALARM_PREFIX)) {
       return;
     }
@@ -331,11 +349,11 @@ function addAutoListeners() {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
-  migrateStorage();
+  migrateStorage().then(() => refreshAutoOrganiseSchedules()).catch(() => {});
 });
 
 chrome.runtime.onStartup.addListener(() => {
-  migrateStorage();
+  migrateStorage().then(() => refreshAutoOrganiseSchedules()).catch(() => {});
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
@@ -386,3 +404,4 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 addAutoListeners();
+refreshAutoOrganiseSchedules().catch(() => {});
