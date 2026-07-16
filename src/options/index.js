@@ -447,7 +447,7 @@ async function handleImport(event) {
 }
 
 elements.addGroup.addEventListener("click", () => {
-  elements.groups.appendChild(createGroupCard({ order: elements.groups.children.length + 1 }));
+  elements.groups.prepend(createGroupCard({ order: 1 }));
   syncOrderInputs();
 });
 elements.sortGroupsAlphabetically.addEventListener("click", sortGroupsAlphabetically);
