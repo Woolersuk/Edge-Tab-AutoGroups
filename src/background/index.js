@@ -11,12 +11,28 @@ const AUTO_ORGANISE_ALARM_PREFIX = "auto-organise-window-";
 const TAB_SYNC_ALARM_PREFIX = "tab-sync-";
 const TAB_SYNC_RETRY_DELAYS_MS = [0, 150, 400, 900];
 
+function isTabInSplitView(tab) {
+  const splitViewNoneId = Number.isInteger(chrome.tabs?.SPLIT_VIEW_ID_NONE)
+    ? chrome.tabs.SPLIT_VIEW_ID_NONE
+    : -1;
+
+  return Number.isInteger(tab?.splitViewId) && tab.splitViewId !== splitViewNoneId;
+}
+
 function getAutoOrganiseAlarmName(windowId) {
   return `${AUTO_ORGANISE_ALARM_PREFIX}${windowId}`;
 }
 
 function getTabSyncAlarmName(tabId, attempt) {
   return `${TAB_SYNC_ALARM_PREFIX}${tabId}-${attempt}`;
+}
+
+function shouldResyncTabOnUpdate(changeInfo) {
+  return (
+    changeInfo.url != null ||
+    changeInfo.status === "complete" ||
+    changeInfo.splitViewId != null
+  );
 }
 
 async function findOrCreateNamedGroup(windowId, groupName, colour, tabId) {
@@ -52,6 +68,10 @@ async function syncTabGroupForTab(tabId) {
   }
 
   if (!tab?.id || !tab.url || tab.pinned || tab.windowId === chrome.windows.WINDOW_ID_NONE) {
+    return;
+  }
+
+  if (isTabInSplitView(tab)) {
     return;
   }
 
@@ -156,7 +176,7 @@ async function organiseWindow(windowId, mode = "manual", scope = "current") {
   );
 
   for (const tab of tabs) {
-    if (!tab.id || !tab.url || tab.pinned) {
+    if (!tab.id || !tab.url || tab.pinned || isTabInSplitView(tab)) {
       continue;
     }
 
@@ -308,7 +328,7 @@ function addAutoListeners() {
     scheduleTabGroupSync(tab.id).catch(() => {});
   });
   chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.url || changeInfo.status === "complete") {
+    if (shouldResyncTabOnUpdate(changeInfo)) {
       scheduleTabGroupSync(tabId).catch(() => {});
       scheduleAutoOrganise(tab.windowId);
     }
