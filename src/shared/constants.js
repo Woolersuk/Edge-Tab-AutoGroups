@@ -1,5 +1,4 @@
 export const GROUPS_STORAGE_KEY = "groups";
-export const GROUPS_SYNC_LEGACY_KEY = "groups";
 export const SETTINGS_STORAGE_KEY = "settings";
 export const STATS_STORAGE_KEY = "stats";
 
