@@ -17,13 +17,11 @@ const elements = {
   organiseCurrent: document.getElementById("organiseCurrent"),
   organiseAll: document.getElementById("organiseAll"),
   exportJson: document.getElementById("exportJson"),
-  importJson: document.getElementById("importJson"),
   importFile: document.getElementById("importFile"),
   inspectColours: document.getElementById("inspectColours"),
   diagnosticsOutput: document.getElementById("diagnosticsOutput"),
   darkMode: document.getElementById("darkMode"),
   autoOrganise: document.getElementById("autoOrganise"),
-  autoOrganiseDelayRange: document.getElementById("autoOrganiseDelayRange"),
   autoOrganiseDelaySeconds: document.getElementById("autoOrganiseDelaySeconds"),
   autoOrganiseDelayOutput: document.getElementById("autoOrganiseDelayOutput"),
   savePreferences: document.getElementById("savePreferences"),
@@ -358,28 +356,46 @@ function formatDelayLabel(seconds) {
 
 function setDelayInputs(seconds) {
   const clampedSeconds = clampDelaySeconds(seconds);
-  elements.autoOrganiseDelayRange.value = String(clampedSeconds);
   elements.autoOrganiseDelaySeconds.value = String(clampedSeconds);
-  elements.autoOrganiseDelayOutput.value = formatDelayLabel(clampedSeconds);
+  elements.autoOrganiseDelayOutput.textContent = formatDelayLabel(clampedSeconds);
+}
+
+function handleDelaySecondsInput(event) {
+  if (event.target.value === "") {
+    return;
+  }
+
+  const seconds = Number(event.target.value);
+  if (Number.isInteger(seconds) && seconds >= 0 && seconds <= 30) {
+    elements.autoOrganiseDelayOutput.textContent = formatDelayLabel(seconds);
+  }
+}
+
+function handleDelaySecondsChange(event) {
+  setDelayInputs(event.target.value);
 }
 
 function syncAutoOrganiseControls() {
   const enabled = elements.autoOrganise.checked;
-  elements.autoOrganiseDelayRange.disabled = !enabled;
   elements.autoOrganiseDelaySeconds.disabled = !enabled;
 }
 
 async function load() {
-  const [groups, settings] = await Promise.all([getGroups(), getSettings()]);
-  state.groups = groups;
-  state.settings = settings;
+  try {
+    const [groups, settings] = await Promise.all([getGroups(), getSettings()]);
+    state.groups = groups;
+    state.settings = settings;
 
-  renderGroups(groups);
-  elements.darkMode.value = settings.darkMode || "system";
-  elements.autoOrganise.checked = Boolean(settings.autoOrganise);
-  setDelayInputs(Math.round((settings.autoOrganiseDelayMs || 0) / 1000));
-  syncAutoOrganiseControls();
-  document.documentElement.dataset.theme = settings.darkMode || "system";
+    renderGroups(groups);
+    elements.darkMode.value = settings.darkMode || "system";
+    elements.autoOrganise.checked = Boolean(settings.autoOrganise);
+    setDelayInputs(Math.round((settings.autoOrganiseDelayMs || 0) / 1000));
+    syncAutoOrganiseControls();
+    document.documentElement.dataset.theme = settings.darkMode || "system";
+  } catch (error) {
+    console.error("Failed to load settings", error);
+    elements.saveStatus.textContent = "Failed to load settings: " + (error?.message || error);
+  }
 }
 
 async function handleSaveGroups() {
@@ -444,15 +460,29 @@ async function handleImport(event) {
     return;
   }
 
+  elements.saveStatus.textContent = "Importing JSON...";
+
   try {
-    const text = await file.text();
+    const text = typeof file.text === "function"
+      ? await file.text()
+      : await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.addEventListener("load", () => resolve(reader.result));
+          reader.addEventListener("error", () => reject(reader.error));
+          reader.readAsText(file);
+        });
     const payload = JSON.parse(text);
     const groups = Array.isArray(payload) ? payload : payload.groups;
-    state.groups = await saveGroups(groups || []);
+    if (!Array.isArray(groups)) {
+      throw new Error("JSON must contain a groups array");
+    }
+
+    state.groups = await saveGroups(groups);
     renderGroups(state.groups);
-    elements.saveStatus.textContent = "Import complete";
-  } catch {
-    elements.saveStatus.textContent = "Import failed: invalid JSON";
+    elements.saveStatus.textContent = `Import complete: ${state.groups.length} group${state.groups.length === 1 ? "" : "s"}`;
+  } catch (error) {
+    console.error("JSON import failed", error);
+    elements.saveStatus.textContent = `Import failed: ${error?.message || "invalid JSON"}`;
   }
 
   event.target.value = "";
@@ -472,15 +502,12 @@ elements.organiseAll.addEventListener("click", () =>
   runOrganiser("organiseAll", "Organising all windows")
 );
 elements.autoOrganise.addEventListener("change", syncAutoOrganiseControls);
-elements.autoOrganiseDelayRange.addEventListener("input", (event) => {
-  setDelayInputs(event.target.value);
-});
 elements.autoOrganiseDelaySeconds.addEventListener("input", (event) => {
-  setDelayInputs(event.target.value);
+  handleDelaySecondsInput(event);
 });
+elements.autoOrganiseDelaySeconds.addEventListener("change", handleDelaySecondsChange);
 elements.savePreferences.addEventListener("click", handleSavePreferences);
 elements.exportJson.addEventListener("click", handleExport);
-elements.importJson.addEventListener("click", () => elements.importFile.click());
 elements.importFile.addEventListener("change", handleImport);
 elements.inspectColours.addEventListener("click", inspectTabGroupColours);
 elements.runTester.addEventListener("click", () => renderTesterResults(elements.testerUrl.value));

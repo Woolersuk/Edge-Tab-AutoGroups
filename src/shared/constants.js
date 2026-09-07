@@ -8,7 +8,7 @@ export const MIN_AUTO_ORGANISE_DELAY_MS = 0;
 export const MAX_AUTO_ORGANISE_DELAY_MS = 30000;
 
 export const DEFAULT_SETTINGS = {
-  autoOrganise: false,
+  autoOrganise: true,
   autoOrganiseDelayMs: DEFAULT_AUTO_ORGANISE_DELAY_MS,
   darkMode: "system"
 };
