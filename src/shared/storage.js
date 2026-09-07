@@ -6,6 +6,7 @@ import {
   DEFAULT_SETTINGS,
   GROUP_COLOURS,
   GROUPS_STORAGE_KEY,
+  GROUPS_SYNC_LEGACY_KEY,
   SETTINGS_STORAGE_KEY,
   STATS_STORAGE_KEY
 } from "./constants.js";
@@ -90,7 +91,7 @@ function normaliseGroupColor(value) {
 }
 
 export async function getGroups() {
-  const result = await chrome.storage.sync.get(GROUPS_STORAGE_KEY);
+  const result = await chrome.storage.local.get(GROUPS_STORAGE_KEY);
   const rawGroups = result[GROUPS_STORAGE_KEY] || [];
   const usedIds = new Set();
   const groups = rawGroups.map((group, index) => normaliseGroup(group, index, usedIds));
@@ -102,7 +103,7 @@ export async function saveGroups(groups) {
   const usedIds = new Set();
   const normalised = groups.map((group, index) => normaliseGroup(group, index, usedIds));
   normalised.sort((left, right) => left.order - right.order);
-  await chrome.storage.sync.set({ [GROUPS_STORAGE_KEY]: normalised });
+  await chrome.storage.local.set({ [GROUPS_STORAGE_KEY]: normalised });
   return normalised;
 }
 
@@ -167,6 +168,25 @@ export async function recordStats(update) {
 }
 
 export async function migrateStorage() {
-  const [groups, settings] = await Promise.all([getGroups(), getSettings()]);
-  await Promise.all([saveGroups(groups), saveSettings(settings)]);
+  const [settings, groups] = await Promise.all([getSettings(), getGroups()]);
+
+  // One-time migration: move groups out of chrome.storage.sync (8 KB/item quota)
+  // into chrome.storage.local (5 MB). The sync area silently fails once the
+  // whole groups array exceeds the per-item limit, which left stale/truncated
+  // config for users with many groups (#groups-quota).
+  const syncResult = await chrome.storage.local.get(GROUPS_STORAGE_KEY);
+  const localGroups = syncResult[GROUPS_STORAGE_KEY];
+  const hasLocalGroups = Array.isArray(localGroups) && localGroups.length > 0;
+
+  if (!hasLocalGroups) {
+    const legacy = await chrome.storage.sync.get(GROUPS_SYNC_LEGACY_KEY);
+    const legacyGroups = legacy[GROUPS_SYNC_LEGACY_KEY];
+    if (Array.isArray(legacyGroups) && legacyGroups.length > 0) {
+      await saveGroups(legacyGroups);
+      await chrome.storage.sync.remove(GROUPS_SYNC_LEGACY_KEY);
+    }
+  }
+
+  await saveSettings(settings);
+  return groups;
 }

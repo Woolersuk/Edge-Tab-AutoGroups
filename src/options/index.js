@@ -284,9 +284,13 @@ async function sortGroupsAlphabetically() {
     )
   );
 
-  state.groups = await saveGroups(sortedGroups);
-  renderGroups(state.groups);
-  elements.saveStatus.textContent = "Groups sorted alphabetically";
+  try {
+    state.groups = await saveGroups(sortedGroups);
+    renderGroups(state.groups);
+    elements.saveStatus.textContent = "Groups sorted alphabetically";
+  } catch (error) {
+    elements.saveStatus.textContent = "Save failed: " + (error?.message || error);
+  }
 }
 
 async function sortGroupsReverseAlphabetically() {
@@ -296,9 +300,13 @@ async function sortGroupsReverseAlphabetically() {
     )
   );
 
-  state.groups = await saveGroups(sortedGroups);
-  renderGroups(state.groups);
-  elements.saveStatus.textContent = "Groups sorted reverse alphabetically";
+  try {
+    state.groups = await saveGroups(sortedGroups);
+    renderGroups(state.groups);
+    elements.saveStatus.textContent = "Groups sorted reverse alphabetically";
+  } catch (error) {
+    elements.saveStatus.textContent = "Save failed: " + (error?.message || error);
+  }
 }
 
 function renderTesterResults(url) {
@@ -375,9 +383,13 @@ async function load() {
 }
 
 async function handleSaveGroups() {
-  state.groups = await saveGroups(collectGroupsFromDom());
-  renderGroups(state.groups);
-  elements.saveStatus.textContent = "Groups saved";
+  try {
+    state.groups = await saveGroups(collectGroupsFromDom());
+    renderGroups(state.groups);
+    elements.saveStatus.textContent = "Groups saved";
+  } catch (error) {
+    elements.saveStatus.textContent = "Save failed: " + (error?.message || error);
+  }
 }
 
 async function handleSavePreferences() {
