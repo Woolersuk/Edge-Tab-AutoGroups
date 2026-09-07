@@ -1,11 +1,12 @@
 export const GROUPS_STORAGE_KEY = "groups";
+export const GROUPS_SYNC_LEGACY_KEY = "groups";
 export const SETTINGS_STORAGE_KEY = "settings";
 export const STATS_STORAGE_KEY = "stats";
 
 export const DEFAULT_GROUP_COLOUR = "blue";
 export const DEFAULT_AUTO_ORGANISE_DELAY_MS = 2000;
-export const MIN_AUTO_ORGANISE_DELAY_MS = 500;
-export const MAX_AUTO_ORGANISE_DELAY_MS = 10000;
+export const MIN_AUTO_ORGANISE_DELAY_MS = 0;
+export const MAX_AUTO_ORGANISE_DELAY_MS = 30000;
 
 export const DEFAULT_SETTINGS = {
   autoOrganise: false,

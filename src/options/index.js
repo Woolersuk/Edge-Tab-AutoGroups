@@ -22,6 +22,10 @@ const elements = {
   inspectColours: document.getElementById("inspectColours"),
   diagnosticsOutput: document.getElementById("diagnosticsOutput"),
   darkMode: document.getElementById("darkMode"),
+  autoOrganise: document.getElementById("autoOrganise"),
+  autoOrganiseDelayRange: document.getElementById("autoOrganiseDelayRange"),
+  autoOrganiseDelaySeconds: document.getElementById("autoOrganiseDelaySeconds"),
+  autoOrganiseDelayOutput: document.getElementById("autoOrganiseDelayOutput"),
   savePreferences: document.getElementById("savePreferences"),
   testerUrl: document.getElementById("testerUrl"),
   testerResults: document.getElementById("testerResults"),
@@ -280,9 +284,13 @@ async function sortGroupsAlphabetically() {
     )
   );
 
-  state.groups = await saveGroups(sortedGroups);
-  renderGroups(state.groups);
-  elements.saveStatus.textContent = "Groups sorted alphabetically";
+  try {
+    state.groups = await saveGroups(sortedGroups);
+    renderGroups(state.groups);
+    elements.saveStatus.textContent = "Groups sorted alphabetically";
+  } catch (error) {
+    elements.saveStatus.textContent = "Save failed: " + (error?.message || error);
+  }
 }
 
 async function sortGroupsReverseAlphabetically() {
@@ -292,9 +300,13 @@ async function sortGroupsReverseAlphabetically() {
     )
   );
 
-  state.groups = await saveGroups(sortedGroups);
-  renderGroups(state.groups);
-  elements.saveStatus.textContent = "Groups sorted reverse alphabetically";
+  try {
+    state.groups = await saveGroups(sortedGroups);
+    renderGroups(state.groups);
+    elements.saveStatus.textContent = "Groups sorted reverse alphabetically";
+  } catch (error) {
+    elements.saveStatus.textContent = "Save failed: " + (error?.message || error);
+  }
 }
 
 function renderTesterResults(url) {
@@ -327,6 +339,36 @@ function renderTesterResults(url) {
     .join("");
 }
 
+function clampDelaySeconds(value) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return 0;
+  }
+
+  return Math.min(30, Math.max(0, Math.round(numericValue)));
+}
+
+function formatDelayLabel(seconds) {
+  if (seconds === 0) {
+    return "Starts immediately";
+  }
+
+  return `Waits ${seconds} second${seconds === 1 ? "" : "s"} before organising`;
+}
+
+function setDelayInputs(seconds) {
+  const clampedSeconds = clampDelaySeconds(seconds);
+  elements.autoOrganiseDelayRange.value = String(clampedSeconds);
+  elements.autoOrganiseDelaySeconds.value = String(clampedSeconds);
+  elements.autoOrganiseDelayOutput.value = formatDelayLabel(clampedSeconds);
+}
+
+function syncAutoOrganiseControls() {
+  const enabled = elements.autoOrganise.checked;
+  elements.autoOrganiseDelayRange.disabled = !enabled;
+  elements.autoOrganiseDelaySeconds.disabled = !enabled;
+}
+
 async function load() {
   const [groups, settings] = await Promise.all([getGroups(), getSettings()]);
   state.groups = groups;
@@ -334,20 +376,32 @@ async function load() {
 
   renderGroups(groups);
   elements.darkMode.value = settings.darkMode || "system";
+  elements.autoOrganise.checked = Boolean(settings.autoOrganise);
+  setDelayInputs(Math.round((settings.autoOrganiseDelayMs || 0) / 1000));
+  syncAutoOrganiseControls();
   document.documentElement.dataset.theme = settings.darkMode || "system";
 }
 
 async function handleSaveGroups() {
-  state.groups = await saveGroups(collectGroupsFromDom());
-  renderGroups(state.groups);
-  elements.saveStatus.textContent = "Groups saved";
+  try {
+    state.groups = await saveGroups(collectGroupsFromDom());
+    renderGroups(state.groups);
+    elements.saveStatus.textContent = "Groups saved";
+  } catch (error) {
+    elements.saveStatus.textContent = "Save failed: " + (error?.message || error);
+  }
 }
 
 async function handleSavePreferences() {
   state.settings = await saveSettings({
-    darkMode: elements.darkMode.value
+    darkMode: elements.darkMode.value,
+    autoOrganise: elements.autoOrganise.checked,
+    autoOrganiseDelayMs: clampDelaySeconds(elements.autoOrganiseDelaySeconds.value) * 1000
   });
   document.documentElement.dataset.theme = state.settings.darkMode;
+  setDelayInputs(Math.round((state.settings.autoOrganiseDelayMs || 0) / 1000));
+  syncAutoOrganiseControls();
+  await chrome.runtime.sendMessage({ action: "refreshAutoOrganise" });
   renderGroups(state.groups);
   elements.saveStatus.textContent = "Preferences saved";
 }
@@ -405,7 +459,7 @@ async function handleImport(event) {
 }
 
 elements.addGroup.addEventListener("click", () => {
-  elements.groups.appendChild(createGroupCard({ order: elements.groups.children.length + 1 }));
+  elements.groups.prepend(createGroupCard({ order: 1 }));
   syncOrderInputs();
 });
 elements.sortGroupsAlphabetically.addEventListener("click", sortGroupsAlphabetically);
@@ -417,6 +471,13 @@ elements.organiseCurrent.addEventListener("click", () =>
 elements.organiseAll.addEventListener("click", () =>
   runOrganiser("organiseAll", "Organising all windows")
 );
+elements.autoOrganise.addEventListener("change", syncAutoOrganiseControls);
+elements.autoOrganiseDelayRange.addEventListener("input", (event) => {
+  setDelayInputs(event.target.value);
+});
+elements.autoOrganiseDelaySeconds.addEventListener("input", (event) => {
+  setDelayInputs(event.target.value);
+});
 elements.savePreferences.addEventListener("click", handleSavePreferences);
 elements.exportJson.addEventListener("click", handleExport);
 elements.importJson.addEventListener("click", () => elements.importFile.click());
