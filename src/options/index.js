@@ -22,6 +22,7 @@ const elements = {
   diagnosticsOutput: document.getElementById("diagnosticsOutput"),
   darkMode: document.getElementById("darkMode"),
   autoOrganise: document.getElementById("autoOrganise"),
+  autoOrganiseDelayRange: document.getElementById("autoOrganiseDelayRange"),
   autoOrganiseDelaySeconds: document.getElementById("autoOrganiseDelaySeconds"),
   autoOrganiseDelayOutput: document.getElementById("autoOrganiseDelayOutput"),
   savePreferences: document.getElementById("savePreferences"),
@@ -343,7 +344,7 @@ function clampDelaySeconds(value) {
     return 0;
   }
 
-  return Math.min(30, Math.max(0, Math.round(numericValue)));
+  return Math.min(60, Math.max(0, Math.round(numericValue)));
 }
 
 function formatDelayLabel(seconds) {
@@ -356,6 +357,7 @@ function formatDelayLabel(seconds) {
 
 function setDelayInputs(seconds) {
   const clampedSeconds = clampDelaySeconds(seconds);
+  elements.autoOrganiseDelayRange.value = String(clampedSeconds);
   elements.autoOrganiseDelaySeconds.value = String(clampedSeconds);
   elements.autoOrganiseDelayOutput.textContent = formatDelayLabel(clampedSeconds);
 }
@@ -366,7 +368,8 @@ function handleDelaySecondsInput(event) {
   }
 
   const seconds = Number(event.target.value);
-  if (Number.isInteger(seconds) && seconds >= 0 && seconds <= 30) {
+  if (Number.isInteger(seconds) && seconds >= 0 && seconds <= 60) {
+    elements.autoOrganiseDelayRange.value = String(seconds);
     elements.autoOrganiseDelayOutput.textContent = formatDelayLabel(seconds);
   }
 }
@@ -375,8 +378,13 @@ function handleDelaySecondsChange(event) {
   setDelayInputs(event.target.value);
 }
 
+function handleDelayRangeInput(event) {
+  setDelayInputs(event.target.value);
+}
+
 function syncAutoOrganiseControls() {
   const enabled = elements.autoOrganise.checked;
+  elements.autoOrganiseDelayRange.disabled = !enabled;
   elements.autoOrganiseDelaySeconds.disabled = !enabled;
 }
 
@@ -502,6 +510,7 @@ elements.organiseAll.addEventListener("click", () =>
   runOrganiser("organiseAll", "Organising all windows")
 );
 elements.autoOrganise.addEventListener("change", syncAutoOrganiseControls);
+elements.autoOrganiseDelayRange.addEventListener("input", handleDelayRangeInput);
 elements.autoOrganiseDelaySeconds.addEventListener("input", (event) => {
   handleDelaySecondsInput(event);
 });

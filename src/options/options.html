@@ -435,9 +435,12 @@
               <span>Auto-organise windows</span>
             </label>
             <div>
-              <label for="autoOrganiseDelaySeconds">Delay before organising</label>
-              <input id="autoOrganiseDelaySeconds" type="number" min="0" max="30" step="1" inputmode="numeric" value="2">
-              <output id="autoOrganiseDelayOutput" for="autoOrganiseDelaySeconds">Starts immediately</output>
+              <label for="autoOrganiseDelayRange">Delay before organising</label>
+              <div class="delay-controls">
+                <input id="autoOrganiseDelayRange" type="range" min="0" max="60" step="1" value="2">
+                <input id="autoOrganiseDelaySeconds" type="number" min="0" max="60" step="1" inputmode="numeric" value="2">
+              </div>
+              <output id="autoOrganiseDelayOutput" for="autoOrganiseDelayRange autoOrganiseDelaySeconds">Starts immediately</output>
             </div>
           </div>
           <div class="toolbar" style="margin-top:16px">

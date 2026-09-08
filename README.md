@@ -1,6 +1,7 @@
 # Auto Tab Grouper v1
 
-Major UX update.
+- Major UX update.
+- Fixed issue with limited loading of groups in cache.
 
 Features:
 
